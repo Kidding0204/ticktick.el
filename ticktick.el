@@ -173,7 +173,7 @@ For the China version (滴答清单), set to https://api.dida365.com."
   :group 'ticktick)
 
 (defcustom ticktick-inbox-heading-title "Inbox"
-  "Title used for the Inbox project heading in Org. For China version you may prefer \="收集箱\=\="
+  "Title used for the Inbox project heading in Org. For China version you may prefer \"收集箱\".
 This only affects the local Org heading name, not remote project IDs."
   :type 'string
   :group 'ticktick)
