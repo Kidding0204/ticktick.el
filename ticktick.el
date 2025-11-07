@@ -1,4 +1,3 @@
-
 ;;; ticktick.el --- Sync Org Mode tasks with TickTick -*- lexical-binding: t; -*-
 
 ;; Author: Paul Huang
@@ -230,13 +229,17 @@ After changing this value, call `ticktick-toggle-sync-timer' to apply changes."
 
 (defun ticktick--make-token-request (form-params)
   "Make a token request with FORM-PARAMS and return the response data."
-  (let* ((form-data
+  (let* ((params-with-creds
+          (append form-params
+                  (list (cons "client_id" ticktick-client-id)
+                        (cons "client_secret" ticktick-client-secret))))
+         (form-data
           (mapconcat
            (lambda (kv)
              (format "%s=%s"
                      (url-hexify-string (car kv))
                      (url-hexify-string (format "%s" (cdr kv)))))
-           form-params
+           params-with-creds
            "&"))
          (authorization (ticktick--authorization-header))
          (response-data nil))
@@ -255,10 +258,15 @@ After changing this value, call `ticktick-toggle-sync-timer' to apply changes."
                   (setq response-data data)))
       :error (cl-function
               (lambda (&key response error-thrown &allow-other-keys)
-                (message "Token request failed: %s (HTTP %s)"
-                         (or error-thrown "unknown error")
-                         (and response (request-response-status-code response)))
-                (setq response-data nil))))
+                (let* ((status (and response (request-response-status-code response)))
+                       (body   (and response (request-response-data response))))
+                  (message "Token request failed: %s (HTTP %s)%s"
+                           (or error-thrown "unknown error")
+                           (or status "?")
+                           (if body
+                               (format " | Response: %s" body)
+                             ""))
+                  (setq response-data nil)))))
     (when (and response-data (plist-get response-data :access_token))
       ;; capture the updated plist
       (setq response-data
@@ -735,4 +743,3 @@ Return the buffer position at the start of the heading."
 
 (provide 'ticktick)
 ;;; ticktick.el ends here
-
