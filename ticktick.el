@@ -1,3 +1,4 @@
+
 ;;; ticktick.el --- Sync Org Mode tasks with TickTick -*- lexical-binding: t; -*-
 
 ;; Author: Paul Huang
@@ -121,6 +122,23 @@
   :group 'ticktick)
 
 
+;; Region/endpoints -----------------------------------------------------------
+
+(defcustom ticktick-oauth-base-url "https://ticktick.com"
+  "Base URL for OAuth endpoints.
+For the international TickTick, leave as https://ticktick.com.
+For the China version (滴答清单), set to https://dida365.com."
+  :type 'string
+  :group 'ticktick)
+
+(defcustom ticktick-api-base-url "https://api.ticktick.com"
+  "Base URL for API endpoints.
+For the international TickTick, leave as https://api.ticktick.com.
+For the China version (滴答清单), set to https://api.dida365.com."
+  :type 'string
+  :group 'ticktick)
+
+
 (defcustom ticktick-dir
   (concat user-emacs-directory "ticktick/")
   "Folder in which to save token."
@@ -151,6 +169,12 @@
 
 (defcustom ticktick-redirect-uri "http://localhost:8080/ticktick-callback"
   "Redirect URI registered with TickTick. Must match OAuth app settings."
+  :type 'string
+  :group 'ticktick)
+
+(defcustom ticktick-inbox-heading-title "Inbox"
+  "Title used for the Inbox project heading in Org. For China version you may prefer \="收集箱\=\="
+This only affects the local Org heading name, not remote project IDs."
   :type 'string
   :group 'ticktick)
 
@@ -216,7 +240,7 @@ After changing this value, call `ticktick-toggle-sync-timer' to apply changes."
            "&"))
          (authorization (ticktick--authorization-header))
          (response-data nil))
-    (request "https://ticktick.com/oauth/token"
+    (request (concat ticktick-oauth-base-url "/oauth/token")
       :type "POST"
       :headers `(("Authorization" . ,authorization)
                  ("Content-Type" . "application/x-www-form-urlencoded"))
@@ -285,6 +309,8 @@ After changing this value, call `ticktick-toggle-sync-timer' to apply changes."
   (message "Client Secret: %s" (if (string-empty-p ticktick-client-secret) "NOT SET" "SET"))
   (message "Redirect URI: %s" ticktick-redirect-uri)
   (message "Auth Scopes: %s" ticktick-auth-scopes)
+  (message "OAuth base URL: %s" ticktick-oauth-base-url)
+  (message "API base URL: %s" ticktick-api-base-url)
   (message "Token file: %s" ticktick-token-file)
   (message "Token exists: %s" (if (and ticktick-token (plist-get ticktick-token :access_token)) "YES" "NO"))
   (when ticktick-token
@@ -302,7 +328,7 @@ Starts local server, requests consent through browser, then captures redirect."
     (user-error "Ticktick-client-id and ticktick-client-secret must be set"))
   (ticktick--start-callback-server)
   (setq ticktick-oauth-state (format "%06x" (random (expt 16 6))))
-  (let* ((auth-url (concat "https://ticktick.com/oauth/authorize?"
+  (let* ((auth-url (concat ticktick-oauth-base-url "/oauth/authorize?"
                            (url-build-query-string
                             `(("client_id" ,ticktick-client-id)
                               ("response_type" "code")
@@ -385,6 +411,7 @@ DATA is the optional request body data."
                     ("Content-Type" . "application/json")))
          (json-data (and data (json-encode data)))
          (response-data nil))
+    (setq url (concat ticktick-api-base-url endpoint))
     (request url
       :type method
       :headers headers
@@ -584,7 +611,7 @@ Return the buffer position at the start of the heading."
 (defun ticktick-fetch-to-org ()
   "Fetch all tasks from TickTick and update org file without duplicating."
   (interactive)
-  (let* ((inbox-project `(:id "inbox" :name "Inbox"))
+  (let* ((inbox-project `(:id "inbox" :name ,ticktick-inbox-heading-title))
          (projects (ticktick-request "GET" "/open/v1/project"))
          (all-projects (cons inbox-project projects)))
     (with-current-buffer (find-file-noselect ticktick-sync-file)
@@ -592,6 +619,24 @@ Return the buffer position at the start of the heading."
        (dolist (project all-projects)
          (ticktick--sync-project project))
        (save-buffer)))))
+
+;;; Region helpers ------------------------------------------------------------
+
+;;;###autoload
+(defun ticktick-use-china-endpoints ()
+  "Switch base URLs to the 滴答清单 (China) endpoints."
+  (interactive)
+  (setq ticktick-oauth-base-url "https://dida365.com")
+  (setq ticktick-api-base-url   "https://api.dida365.com")
+  (message "ticktick.el: Using China endpoints (dida365.com)"))
+
+;;;###autoload
+(defun ticktick-use-global-endpoints ()
+  "Switch base URLs back to the global TickTick endpoints."
+  (interactive)
+  (setq ticktick-oauth-base-url "https://ticktick.com")
+  (setq ticktick-api-base-url   "https://api.ticktick.com")
+  (message "ticktick.el: Using global endpoints (ticktick.com)"))
 
 (defun ticktick-push-from-org ()
   "Push all updated org tasks back to TickTick."
@@ -690,3 +735,4 @@ Return the buffer position at the start of the heading."
 
 (provide 'ticktick)
 ;;; ticktick.el ends here
+
