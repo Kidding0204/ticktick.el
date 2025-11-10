@@ -228,7 +228,7 @@ FORM-PARAMS: 表单参数的 alist，例如 grant_type、code 等。
          (authorization (ticktick--authorization-header))
          (response-data nil))
     ;; 【适配点】修改此 URL 为滴答清单国内版
-    (request "https://ticktick.com/oauth/token"
+    (request "https://dida365.com/oauth/token"
       :type "POST"
       :headers `(("Authorization" . ,authorization)
                  ("Content-Type" . "application/x-www-form-urlencoded"))
@@ -332,7 +332,7 @@ query: URL 查询参数，包含 code 和 state。"
   ;; 生成 6 位十六进制随机 state
   (setq ticktick-oauth-state (format "%06x" (random (expt 16 6))))
   ;; 【适配点】修改此 URL 为滴答清单国内版
-  (let* ((auth-url (concat "https://ticktick.com/oauth/authorize?"
+  (let* ((auth-url (concat "https://dida365.com/oauth/authorize?"
                            (url-build-query-string
                             `(("client_id" ,ticktick-client-id)
                               ("response_type" "code")
@@ -428,7 +428,7 @@ DATA: 可选的请求体数据（plist 或 alist，会被转换为 JSON）
 【适配点】此函数中的基础 URL 需要改为滴答清单国内版 API 端点。"
   (ticktick-ensure-token)
   ;; 【适配点】修改此基础 URL 为滴答清单国内版
-  (let* ((url (concat "https://api.ticktick.com" endpoint))
+  (let* ((url (concat "https://api.dida365.com" endpoint))
          (access-token (plist-get ticktick-token :access_token))
          (headers `(("Authorization" . ,(concat "Bearer " access-token))
                     ("Content-Type" . "application/json")))
